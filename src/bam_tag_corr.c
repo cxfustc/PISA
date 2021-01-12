@@ -350,6 +350,7 @@ int bam_corr_umi(int argc, char **argv)
     
     hts_set_threads(args.out, args.file_th); // write file in multi-threads
 
+    /*
     for (;;) {
         struct bam_pool *b = bam_pool_create();
         bam_read_pool(b, args.in, args.hdr, args.chunk_size);
@@ -360,8 +361,8 @@ int bam_corr_umi(int argc, char **argv)
         b = run_it(b);
         write_out(b);   
     }
+    */
 
-    /*
     hts_tpool *p = hts_tpool_init(args.n_thread);
     hts_tpool_process *q = hts_tpool_process_init(p, args.n_thread*2, 0);
     hts_tpool_result *r;
@@ -394,7 +395,7 @@ int bam_corr_umi(int argc, char **argv)
     }
     hts_tpool_process_destroy(q);
     hts_tpool_destroy(p);
-    */
+
     memory_release();
     LOG_print("Real time: %.3f sec; CPU: %.3f sec; Peak RSS: %.3f GB.", realtime() - t_real, cputime(), peakrss() / 1024.0 / 1024.0 / 1024.0);
     //LOG_print("%d records updated.", args.update_count);

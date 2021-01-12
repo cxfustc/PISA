@@ -11,6 +11,7 @@ enum feature_type {
     feature_unknow =-1,
     feature_gene,
     feature_transcript,
+    feature_lncRNA,
     feature_CDS,
     feature_start_codon,
     feature_stop_codon,
@@ -29,6 +30,7 @@ static const char *feature_type_names[] = {
     // The following feature types are required: "gene", "transcript"
     "gene",
     "transcript",
+    "lnc_RNA",
     // The features "CDS", "start_codon", "stop_codon", "5UTR", "3UTR", "inter", "inter_CNS", "intron_CNS" and "exon" are optional.
     "CDS",
     "start_codon",
