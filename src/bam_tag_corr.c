@@ -107,8 +107,8 @@ void build_index()
     double t_real;
     t_real = realtime();
     
-    struct dict *cell_bc = dict_init();
-    dict_set_value(cell_bc);
+    //struct dict *cell_bc = dict_init();
+    //dict_set_value(cell_bc);
     
     htsFile *fp = hts_open(args.input_fname, "r");
     

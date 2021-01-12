@@ -145,24 +145,40 @@ int PISA_dna_query0(const struct PISA_dna_pool *p, const char *seq)
         if (j < i) break;
         int ret;
         ret = memcmp(p->data[i].dna, a, l2);
-        if (ret == 0) return i;
-        if (ret > 0) return -1;
+        if (ret == 0) {
+            free(a); return i;
+        }
+        if (ret > 0) {
+            free(a);
+            return -1;
+        }
         
         ret = memcmp(p->data[j].dna, a, l2);
-        if (ret == 0) return j;
-        if (ret < 0) return -1;
+        if (ret == 0) {
+            free(a); return j;
+        }
+        if (ret < 0) {
+            free(a);
+            return -1;
+        }
         
         int m = (i+j)/2;
         
         ret = memcmp(p->data[m].dna, a, l2);
-        if (ret == 0) return m;
+        if (ret == 0) {
+            free(a);
+            return m;
+        }
 
-        if (i == m||j==m) return -1;
+        if (i == m||j==m) {
+            free(a);
+            return -1;
+        }
         
         if (ret > 0) j = m;
         else i = m;
     }
-
+    free(a);
     return -1;
 }
 int PISA_idx_query0(struct PISA_dna_pool *p, const int idx)
