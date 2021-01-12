@@ -140,7 +140,7 @@ int PISA_dna_query0(const struct PISA_dna_pool *p, const char *seq)
     if (p->len != l) error("Try to insert an unequal length sequence. %s, %d vs %d.", seq, l, p->len);
     uint8_t *a = PISA_dna_pack(seq, l);
     int i = 0, j = p->l > 0 ? p->l-1 : 0;
-    int l2 = l&~1;
+    int l2 = l/2;
     for (;;) {
         if (j < i) break;
         int ret;
