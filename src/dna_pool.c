@@ -1,27 +1,26 @@
 #include "dna_pool.h"
 #include "htslib/kstring.h"
 
-static const unsigned char seq_nt16_table[256] = {
-    15,15,15,15, 15,15,15,15, 15,15,15,15, 15,15,15,15,
-    15,15,15,15, 15,15,15,15, 15,15,15,15, 15,15,15,15,
-    15,15,15,15, 15,15,15,15, 15,15,15,15, 15,15,15,15,
-     1, 2, 4, 8, 15,15,15,15, 15,15,15,15, 15, 0 /*=*/,15,15,
-    15, 1,14, 2, 13,15,15, 4, 11,15,15,12, 15, 3,15,15,
-    15,15, 5, 6,  8,15, 7, 9, 15,10,15,15, 15,15,15,15,
-    15, 1,14, 2, 13,15,15, 4, 11,15,15,12, 15, 3,15,15,
-    15,15, 5, 6,  8,15, 7, 9, 15,10,15,15, 15,15,15,15,
-
-    15,15,15,15, 15,15,15,15, 15,15,15,15, 15,15,15,15,
-    15,15,15,15, 15,15,15,15, 15,15,15,15, 15,15,15,15,
-    15,15,15,15, 15,15,15,15, 15,15,15,15, 15,15,15,15,
-    15,15,15,15, 15,15,15,15, 15,15,15,15, 15,15,15,15,
-    15,15,15,15, 15,15,15,15, 15,15,15,15, 15,15,15,15,
-    15,15,15,15, 15,15,15,15, 15,15,15,15, 15,15,15,15,
-    15,15,15,15, 15,15,15,15, 15,15,15,15, 15,15,15,15,
-    15,15,15,15, 15,15,15,15, 15,15,15,15, 15,15,15,15
+static const unsigned char nt16_table[256] = {
+    16, 16, 16, 16, 16, 16, 16, 16,  16, 16, 16, 16, 16, 16, 16, 16,
+    16, 16, 16, 16, 16, 16, 16, 16,  16, 16, 16, 16, 16, 16, 16, 16,
+    16, 16, 16, 16, 16, 16, 16, 16,  16, 16, 16, 16, 16, 16, 16, 16,
+    16, 16, 16, 16, 16, 16, 16, 16,  16, 16, 16, 16, 16, 0, 16, 16,
+    16, 1, 16, 2, 16, 16, 16, 4,  16, 16, 16, 16, 16, 16, 15, 16,
+    16, 16, 16, 16, 8, 16, 16, 16,  16, 16, 16, 16, 16, 16, 16, 16,
+    16, 1, 16, 2, 16, 16, 16, 4,  16, 16, 16, 16, 16, 16, 15, 16,
+    16, 16, 16, 16, 8, 16, 16, 16,  16, 16, 16, 16, 16, 16, 16, 16,
+    16, 16, 16, 16, 16, 16, 16, 16,  16, 16, 16, 16, 16, 16, 16, 16,
+    16, 16, 16, 16, 16, 16, 16, 16,  16, 16, 16, 16, 16, 16, 16, 16,
+    16, 16, 16, 16, 16, 16, 16, 16,  16, 16, 16, 16, 16, 16, 16, 16,
+    16, 16, 16, 16, 16, 16, 16, 16,  16, 16, 16, 16, 16, 16, 16, 16,
+    16, 16, 16, 16, 16, 16, 16, 16,  16, 16, 16, 16, 16, 16, 16, 16,
+    16, 16, 16, 16, 16, 16, 16, 16,  16, 16, 16, 16, 16, 16, 16, 16,
+    16, 16, 16, 16, 16, 16, 16, 16,  16, 16, 16, 16, 16, 16, 16, 16,
+    16, 16, 16, 16, 16, 16, 16, 16,  16, 16, 16, 16, 16, 16, 16, 16
 };
 
-static const char seq_nt16_str[] = "=ACMGRSVTWYHKDBN";
+static const char nt16_str[] = "=ACMGRSVTWYHKDBN*";
 
 #define MAX_DISTANCE_UMI 1
 
@@ -45,27 +44,24 @@ void dna_pool_corr(struct PISA_dna_pool *p, int e)
 
     if (e <0) e = 1;
     
-    if (e == 0) { // disable correction
-    }
-    else {    
+    if (e == 0) { free(idx); return; } // disable correction
 
-        for (i = 0; i < p->l; ++i) {
-            struct PISA_dna *a = &p->data[i];
-            if (idx[i] != i) continue; // already be updated
-            int best = i;
-            int best_cnt = a->count;
-            for (j = i+1; j < p->l; ++j) {
-                struct PISA_dna *b = &p->data[j];
-                int dist = dna_dist(a->dna, b->dna, p->len/2);
-                if (dist <= e) {                
-                    if (best_cnt >= b->count) idx[j] = best;
-                    else { // refresh index
-                        int k;
-                        for (k = 0; k < p->l; ++k)
-                            if (idx[k] == best) idx[k] = j;
-                        best = j;
-                        best_cnt = b->count;
-                    }
+    for (i = 0; i < p->l; ++i) {
+        struct PISA_dna *a = &p->data[i];
+        if (idx[i] != i) continue; // already be updated
+        int best = i;
+        int best_cnt = a->count;
+        for (j = i+1; j < p->l; ++j) {
+            struct PISA_dna *b = &p->data[j];
+            int dist = dna_dist(a->dna, b->dna, p->len/2);
+            if (dist <= e) {                
+                if (best_cnt >= b->count) idx[j] = best;
+                else { // refresh index
+                    int k;
+                    for (k = 0; k < p->l; ++k)
+                        if (idx[k] == best) idx[k] = j;
+                    best = j;
+                    best_cnt = b->count;
                 }
             }
         }
@@ -84,11 +80,10 @@ char *dna_decode_str(struct PISA_dna *b, int l)
     kstring_t str = {0,0,0};
     int i;
     for (i = 0; i < l; ++i) {
-        kputc(seq_nt16_str[b->dna[i]>>4], &str);
-        kputc(seq_nt16_str[b->dna[i]&0xf], &str);
+        kputc(nt16_str[b->dna[i]>>4], &str);
+        kputc(nt16_str[b->dna[i]&0xf], &str);
     }
     return str.s;
-    
 }
 // use dna_pool_corr() before dna_corr(); 
 char *dna_corr(struct PISA_dna_pool *p, const char *seq)
@@ -103,7 +98,7 @@ char *dna_corr(struct PISA_dna_pool *p, const char *seq)
     struct PISA_dna *b = &p->data[a->alias];
     return dna_decode_str(b, p->len/2);
 }
-//static const int seq_nt16_int[] = { 4, 0, 1, 4, 2, 4, 4, 4, 3, 4, 4, 4, 4, 4, 4, 4 };
+//static const int nt16_int[] = { 4, 0, 1, 4, 2, 4, 4, 4, 3, 4, 4, 4, 4, 4, 4, 4 };
 
 void PISA_dna_destroy(struct PISA_dna_pool *p)
 {
@@ -129,8 +124,12 @@ static uint8_t *PISA_dna_pack(const char *seq, int l)
 {
     int l2 = l&~1, i;
     uint8_t *p = malloc(l2);
-    for (i = 0; i < l2; i+=2) 
-        p[i>>1] = seq_nt16_table[(unsigned char)seq[i]] << 4 | seq_nt16_table[(unsigned char)seq[i+1]];
+    for (i = 0; i < l2; i+=2) {
+        register unsigned char x = nt16_table[(unsigned char)seq[i]];
+        register unsigned char y = nt16_table[(unsigned char)seq[i+1]];
+        assert(x != 16 && y != 16);
+        p[i>>1] = x<< 4 | y;
+    }
     return p;
 }
 // return index of query sequence, because all the sequence save in the pool by order, the index is not stable
@@ -248,8 +247,8 @@ void PISA_dna_pool_print(struct PISA_dna_pool *p) {
         uint8_t *a = p->data[i].dna;
         str.l = 0;
         for (j = 0; j < p->len/2; ++j) {
-            kputc(seq_nt16_str[a[j]>>4], &str);
-            kputc(seq_nt16_str[a[j]&0xf], &str);
+            kputc(nt16_str[a[j]>>4], &str);
+            kputc(nt16_str[a[j]&0xf], &str);
         }
         debug_print("%s\t%d", str.s, p->data[i].count);
     }
@@ -354,6 +353,25 @@ struct PISA_dna *PISA_idx_query(struct PISA_dna_pool *p, const int idx)
 #ifdef _DNA_POOL_MAIN
 int main()
 {
+    /*
+    unsigned char x[256];
+    int i;
+    for (i = 0; i < 256; ++i) x[i] = 16;
+    x['='] = 0;
+    x['a'] = 1; x['A'] = 1;
+    x['c'] = 2; x['C'] = 2;
+    x['g'] = 4; x['G'] = 4;
+    x['t'] = 8; x['T'] = 8;
+    x['n'] = 15; x['N'] = 15;
+
+    for (i = 0; i < 256; ++i) {
+        printf("%d, ", x[i]);
+        if ((i+1)%8 == 0) printf(" ");
+        if ((i+1)%16 == 0) printf("\n");
+    }
+    printf("\n");
+
+    */
     char *a = "AAGATGGCCTTACGAAGTGC";
     char *b = "AAGATGGCCTTACGAAGTGG";
     char *c = "AAGATGGCCTTACGAAGTGA";
@@ -379,6 +397,8 @@ int main()
     PISA_dna_pool_print(p);
         
     PISA_dna_destroy(p);
+   
     return 0;
+
 }
 #endif
