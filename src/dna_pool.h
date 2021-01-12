@@ -10,6 +10,7 @@ struct PISA_dna {
     union {
         int count;
         void *data;
+        int alias;
     };
 };
 
@@ -18,6 +19,8 @@ struct PISA_dna_pool {
     int l, m;
     int len; // dna length, all DNAs in the pool should be equal length
 };
+
+char *dna_decode_str(struct PISA_dna *b, int l);
 
 void PISA_dna_destroy(struct PISA_dna_pool *p);
 void PISA_idx_destroy(struct PISA_dna_pool *p);
@@ -35,5 +38,8 @@ struct PISA_dna *PISA_dna_query(struct PISA_dna_pool *p, const char *seq);
 struct PISA_dna *PISA_idx_push(struct PISA_dna_pool *p, const int idx);
 struct PISA_dna *PISA_idx_push1(struct PISA_dna_pool *p, const int idx, void *data);
 struct PISA_dna *PISA_idx_query(struct PISA_dna_pool *p, const int idx);
+
+void dna_pool_corr(struct PISA_dna_pool *p, int e);
+char *dna_corr(struct PISA_dna_pool *p, const char *seq);
 
 #endif

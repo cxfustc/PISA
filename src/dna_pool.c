@@ -23,7 +23,87 @@ static const unsigned char seq_nt16_table[256] = {
 
 static const char seq_nt16_str[] = "=ACMGRSVTWYHKDBN";
 
-static const int seq_nt16_int[] = { 4, 0, 1, 4, 2, 4, 4, 4, 3, 4, 4, 4, 4, 4, 4, 4 };
+#define MAX_DISTANCE_UMI 1
+
+int dna_dist(const uint8_t *a, const uint8_t *b, size_t l)
+{
+    int dist = 0;
+    while (l-- > 0) {
+        if (*a++ != *b++) {
+            if ((a[-1] & 0xf) != (b[-1]&0xf)) dist++; 
+            if (a[-1]>>4 != b[-1]>>4) dist++;
+        }
+    }
+    return dist;
+}
+// correct similar pool::dna by pool::count
+void dna_pool_corr(struct PISA_dna_pool *p, int e)
+{
+    int i, j;
+    int *idx = malloc(p->l*sizeof(int));
+    for (i = 0; i < p->l; ++i) idx[i] = i;
+
+    if (e <0) e = 1;
+    
+    if (e == 0) { // disable correction
+    }
+    else {    
+
+        for (i = 0; i < p->l; ++i) {
+            struct PISA_dna *a = &p->data[i];
+            if (idx[i] != i) continue; // already be updated
+            int best = i;
+            int best_cnt = a->count;
+            for (j = i+1; j < p->l; ++j) {
+                struct PISA_dna *b = &p->data[j];
+                int dist = dna_dist(a->dna, b->dna, p->len/2);
+                if (dist <= e) {                
+                    if (best_cnt >= b->count) idx[j] = best;
+                    else { // refresh index
+                        int k;
+                        for (k = 0; k < p->l; ++k)
+                            if (idx[k] == best) idx[k] = j;
+                        best = j;
+                        best_cnt = b->count;
+                    }
+                }
+            }
+        }
+    }
+
+    // update alias
+    for (i = 0; i < p->l; ++i) {
+        struct PISA_dna *a = &p->data[i];
+        a->alias = idx[i];
+    }
+    
+    free(idx);
+}
+char *dna_decode_str(struct PISA_dna *b, int l)
+{
+    kstring_t str = {0,0,0};
+    int i;
+    for (i = 0; i < l; ++i) {
+        kputc(seq_nt16_str[b->dna[i]>>4], &str);
+        kputc(seq_nt16_str[b->dna[i]&0xf], &str);
+    }
+    return str.s;
+    
+}
+// use dna_pool_corr() before dna_corr(); 
+char *dna_corr(struct PISA_dna_pool *p, const char *seq)
+{
+    struct PISA_dna *a = PISA_dna_query(p, seq);
+    if (a == NULL) {
+        LOG_print("%s", seq);
+        return NULL;
+    }
+    //assert(a);
+    if (a->alias < 0) return NULL;
+    struct PISA_dna *b = &p->data[a->alias];
+    return dna_decode_str(b, p->len/2);
+}
+//static const int seq_nt16_int[] = { 4, 0, 1, 4, 2, 4, 4, 4, 3, 4, 4, 4, 4, 4, 4, 4 };
 
 void PISA_dna_destroy(struct PISA_dna_pool *p)
 {
@@ -54,7 +134,7 @@ static uint8_t *PISA_dna_pack(const char *seq, int l)
     return p;
 }
 // return index of query sequence, because all the sequence save in the pool by order, the index is not stable
-int PISA_dna_query0(struct PISA_dna_pool *p, const char *seq)
+int PISA_dna_query0(const struct PISA_dna_pool *p, const char *seq)
 {
     if (p->len == 0 || p->l== 0) return -1;
     int l = strlen(seq);    
@@ -122,10 +202,10 @@ static int PISA_idx_pool_add(struct PISA_dna_pool *p, int i, const int idx)
     p->l++;
     enlarge_pool(p);
 
-    memmove(p->data+i+2, p->data+i+1, (p->l-i-1)*sizeof(struct PISA_dna));
-    memset(&p->data[i+1], 0, sizeof(struct PISA_dna));
-    p->data[i+1].idx = idx;
-    return i+1;
+    memmove(p->data+i+1, p->data+i, (p->l-i)*sizeof(struct PISA_dna));
+    memset(&p->data[i], 0, sizeof(struct PISA_dna));
+    p->data[i].idx = idx;
+    return i;
 }
 static int PISA_idx_push_core(struct PISA_dna_pool *p, const int idx)
 {
@@ -137,13 +217,13 @@ static int PISA_idx_push_core(struct PISA_dna_pool *p, const int idx)
     int i = 0, j = p->l > 0 ? p->l-1 : 0;
     for (;;) {
         if (p->data[i].idx == idx) return i;
-        if (p->data[i].idx > idx) return PISA_idx_pool_add(p, i-1, idx);
+        if (p->data[i].idx > idx) return PISA_idx_pool_add(p, i, idx);
         if (p->data[j].idx == idx) return j;
-        if (p->data[j].idx < idx) return PISA_idx_pool_add(p, j, idx);
+        if (p->data[j].idx < idx) return PISA_idx_pool_add(p, j+1, idx);
 
         int m = (i+j)/2;
-        if (m==i) return PISA_idx_pool_add(p, i, idx);
-        if (m==j) return PISA_idx_pool_add(p, j, idx);
+        //if (m==i) return PISA_idx_pool_add(p, i, idx);
+        if (m==i||m==j) return PISA_idx_pool_add(p, j, idx); // add to j
         
         if (p->data[m].idx == idx) return m;
         if (p->data[m].idx > idx) j = m;
@@ -155,10 +235,10 @@ static int PISA_dna_pool_add(struct PISA_dna_pool *p, int i, uint8_t *a, int l)
 {
     p->l++;
     enlarge_pool(p);
-    memmove(p->data+i+2, p->data+i+1, (p->l-i-1)*sizeof(struct PISA_dna));
-    memset(&p->data[i+1], 0, sizeof(struct PISA_dna));
-    p->data[i+1].dna = a;
-    return i+1;
+    memmove(p->data+i+1, p->data+i, (p->l-i)*sizeof(struct PISA_dna));
+    memset(&p->data[i], 0, sizeof(struct PISA_dna));
+    p->data[i].dna = a;
+    return i;
 }
 void PISA_dna_pool_print(struct PISA_dna_pool *p) {
     int i, j;
@@ -202,7 +282,7 @@ static int PISA_dna_push_core(struct PISA_dna_pool *p, const char *seq)
             return i;
         }
         if (ret > 0) // add to front of data[i]
-            return PISA_dna_pool_add(p, i-1, a, l2);
+            return PISA_dna_pool_add(p, i, a, l2);
             
         ret = memcmp(p->data[j].dna, a, l2);
         if (ret == 0) {
@@ -210,14 +290,14 @@ static int PISA_dna_push_core(struct PISA_dna_pool *p, const char *seq)
             return j;
         }
         if (ret < 0) // add to end of data[j]
-            return PISA_dna_pool_add(p, j, a, l2);
+            return PISA_dna_pool_add(p, j+1, a, l2);
         
         int m = (i+j)/2;
 
-        if (m == i) 
-            return PISA_dna_pool_add(p, i, a, l2);
+        //if (m == i) 
+            //return PISA_dna_pool_add(p, i, a, l2);
         
-        if (m == j)
+        if (m==i||m == j)
             return PISA_dna_pool_add(p, j, a, l2);
         
         ret = memcmp(p->data[m].dna, a, l2);

@@ -55,11 +55,6 @@ static struct args {
     .n_record        = 0
 };
 
-union counts {
-    uint32_t count;
-    struct PISA_dna_pool *p;
-};
-
 static void memory_release()
 {
     bam_hdr_destroy(args.hdr);
@@ -239,12 +234,13 @@ int count_matrix_core(bam1_t *b)
         if (c == NULL) {
             c = PISA_idx_push(v, cell_id);
         //if (c->data == NULL) {
-            union counts *counts = malloc(sizeof(union counts));
-            if (args.umi_tag) 
-                counts->p = PISA_dna_pool_init();
+            //union counts *counts = malloc(sizeof(union counts));
+            if (args.umi_tag) {
+                struct PISA_dna_pool *p = PISA_dna_pool_init();
+                c->data = p;
+            }
             else
-                counts->count = 0;
-            c->data = counts;
+                c->count = 0;
         }
 
         if (args.umi_tag) {
@@ -252,13 +248,12 @@ int count_matrix_core(bam1_t *b)
             assert(umi_tag);
             char *val = (char*)(umi_tag+1);
             assert(c->data);
-            union counts *count = c->data;
+            struct PISA_dna_pool *p = c->data;
 
-            PISA_dna_push(count->p, val);
+            PISA_dna_push(p, val);
         }
         else {
-            union counts *count = c->data;
-            count->count++;
+            c->count++;
         }
     }
     free(str.s);
@@ -275,12 +270,12 @@ static void update_counts()
         int j;
         int n_cell = v->l;
         for (j = 0; j < n_cell; ++j) {
-            union counts *count = v->data[j].data;
-            assert(count);
+
             if (args.umi_tag) {
-                int size = count->p->l;
-                PISA_dna_destroy(count->p);
-                count->count = size;
+                struct PISA_dna_pool *p = v->data[j].data;
+                int size = p->l;
+                PISA_dna_destroy(p);
+                v->data[j].count = size;
             }
         }
         args.n_record += n_cell;
@@ -362,8 +357,8 @@ static void write_outs()
             int j;
             int n_cell = v->l;
             for (j = 0; j < n_cell; ++j) {
-                union counts *count = v->data[j].data;
-                ksprintf(&str, "%d\t%d\t%u\n", i+1, v->data[j].idx+1, count->count);
+                // union counts *count = v->data[j].data;
+                ksprintf(&str, "%d\t%d\t%u\n", i+1, v->data[j].idx+1,  v->data[j].count);
             }
 
             if (str.l > 100000000) {

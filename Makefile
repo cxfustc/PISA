@@ -55,7 +55,7 @@ LIB_OBJ = src/barcode_list.o \
 	src/dict.o \
 	src/ksa.o \
 	src/bam_pool.o \
-	src/umi_corr.o \
+	src/multi_index_list.o \
 	src/dict.o \
 	src/read_thread.o \
 	src/read_tags.o \
@@ -98,6 +98,7 @@ src/bam_count.o: src/bam_count.c pisa_version.h
 src/bam_pick.o: src/bam_pick.c
 src/bam_anno_vcf.o: src/bam_anno_vcf.c
 src/bam_tag_corr.o: src/bam_tag_corr.c
+src/multi_index_list.o:src/multi_index_list.c
 src/umi_corr.o: src/umi_corr.c
 src/fastq_parse_barcode.o: src/fastq_parse_barcode.c
 src/fastq_sort.o: src/fastq_sort.c
