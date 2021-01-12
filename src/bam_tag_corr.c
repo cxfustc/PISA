@@ -100,7 +100,12 @@ int *sam_tag_values(bam1_t *b, int n,  char **blocks)
     return idx;
 }
 
-
+void *umi_corr(void *_u)
+{
+    struct PISA_dna_pool *u = (struct PISA_dna_pool *)_u;
+    dna_pool_corr(u, args.dist);
+    return NULL;
+}
 void build_index()
 {
     LOG_print("Building index ..");
@@ -166,13 +171,36 @@ void build_index()
         
     }
     */
+    LOG_print("Start correction..");
     // correction
     // todo: multi-threads
+    /*
     for (i = 0; i < args.idxlst->l; ++i) {
         struct PISA_dna_pool *u = args.idxlst->mi[i].data;
         assert(u);
         dna_pool_corr(u, args.dist);
     }
+    */
+    
+    hts_tpool *p = hts_tpool_init(args.n_thread);
+    hts_tpool_process *q = hts_tpool_process_init(p, args.n_thread*2, 0);
+    //hts_tpool_result *r;
+
+    for (i = 0; i < args.idxlst->l; ++i) {
+        struct PISA_dna_pool *u = args.idxlst->mi[i].data;
+        
+        int block;
+        do {
+            block = hts_tpool_dispatch2(p, q, umi_corr, u, 0);
+        }
+        while (block == -1);        
+    }
+    
+    hts_tpool_process_flush(q);
+    hts_tpool_process_destroy(q);
+    hts_tpool_destroy(p);
+    
+
     /*
     for (i = 0; i < args.idxlst->l; ++i) {
         struct multi_index *mi = &args.idxlst->mi[i];
