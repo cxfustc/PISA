@@ -33,7 +33,6 @@ static struct args {
     htsFile     * out;
 
     bam_hdr_t   * hdr;
-
     
     int           n_thread;
     int           file_th;
@@ -67,8 +66,13 @@ static void memory_release()
     bam_hdr_destroy(args.hdr);
     sam_close(args.in);
     sam_close(args.out);
-    index_list_destroy(args.idxlst);
     int i;
+    for (i = 0; i < args.idxlst->l; ++i) {
+        struct PISA_dna_pool *p = args.idxlst->mi[i].data;
+        PISA_dna_destroy(p);
+    }
+    index_list_destroy(args.idxlst);
+
     for (i = 0; i < args.n_block; ++i) {
         free(args.blocks[i]);
         dict_destroy(args.blkidx[i]);
@@ -124,8 +128,7 @@ void build_index()
             c->flag & BAM_FSUPPLEMENTARY ||
             c->flag & BAM_FUNMAP ||
             c->flag & BAM_FDUP) continue;
-        //bc_push(cell_bc, cr_method, n_tag, tags, umi_tag, b);
-
+        
         const char *umi = (const char *)bam_aux_get(b, args.tag);
         if (!umi) continue;
         int *idx = sam_tag_values(b, args.n_block, args.blocks);
