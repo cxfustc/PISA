@@ -125,7 +125,9 @@ void build_index()
     hts_set_threads(fp, args.file_th);
     bam1_t *b = bam_init1();
     int i;
+    uint32_t reads=0;
     for (;;) {
+        reads++;
         if (sam_read1(fp, hdr, b) < 0) break;
         bam1_core_t *c = &b->core;
         if (c->flag & BAM_FQCFAIL ||
@@ -151,6 +153,7 @@ void build_index()
         }
         assert(u);
         PISA_dna_push(u, umi+1);
+        if (reads%1000000 ==0) LOG_print("%u reads indexed.", reads);
     }
     bam_destroy1(b);
     bam_hdr_destroy(hdr);
