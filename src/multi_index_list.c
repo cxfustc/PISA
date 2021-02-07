@@ -3,6 +3,7 @@
 int lstcmp(int *idx1, int *idx2, int l)
 {
     while (l-- > 0) {
+        LOG_print("%d %d vs %d", l, *idx1, *idx2);
         if (*idx1++ != *idx2++) 
             return idx1[-1] - idx2[-1];
     }
@@ -21,7 +22,9 @@ int index_add(struct index_list *list, int i, int *idx)
     enlarge_list(list);
     memmove(list->mi+i+1, list->mi+i, (list->l-i)*sizeof(struct multi_index));
     memset(&list->mi[i], 0, sizeof(struct multi_index));
-    list->mi[i].mi = idx;
+    int *new = malloc(list->l_idx*sizeof(int));
+    memcpy(new, idx, list->l_idx*sizeof(int));
+    list->mi[i].mi = new;
     return i;
 }
 
@@ -47,6 +50,7 @@ static int index_push_core(struct index_list *list, int l, int *idx)
     int i= 0, j = list->l-1;
     
     for (;;) {
+        LOG_print("%d, %d", i, j);
         ret = lstcmp(list->mi[i].mi, idx, l);
         if (ret == 0) return i;
         if (ret > 0) return index_add(list, i, idx);
@@ -120,6 +124,40 @@ void index_list_destroy(struct index_list *list)
     int i;
     for (i = 0; i < list->l; ++i)
         free(list->mi[i].mi);
+
     free(list->mi);
     free(list);
 }
+
+#ifdef _MIL_MAIN
+int main()
+{
+    double t_real;
+    t_real = realtime();
+    
+    int idx[2] = {0,0};
+
+    struct index_list *il = index_list_init();
+    int i,j;
+    for (i = 0; i < 1000; ++i) {            
+        idx[0] = rand()%10000;
+        for (j = 0; j < 1000; ++j) {
+            idx[1] = rand()%10000;
+            index_push(il, 2, idx);
+        }
+    }
+
+    for (i = 0; i < il->l; ++i) {
+        struct multi_index *mi = &il->mi[i];
+        for (j = 0; j < il->l_idx; ++j) 
+            printf("%d\t",mi->mi[j]);
+        printf("%d\n",mi->count);
+    }
+
+    index_list_destroy(il);
+
+    LOG_print("Real time: %.3f sec; CPU: %.3f sec; Peak RSS: %.3f GB.", realtime() - t_real, cputime(), peakrss() / 1024.0 / 1024.0 / 1024.0);
+    return 0;
+}
+
+#endif

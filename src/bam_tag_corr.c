@@ -71,7 +71,7 @@ static void memory_release()
         struct PISA_dna_pool *p = args.idxlst->mi[i].data;
         PISA_dna_destroy(p);
     }
-    index_list_destroy(args.idxlst);
+    index_list_destroy(args.idxlst, 1);
 
     for (i = 0; i < args.n_block; ++i) {
         free(args.blocks[i]);
@@ -127,8 +127,9 @@ void build_index()
     int i;
     uint32_t reads=0;
     for (;;) {
-        reads++;
         if (sam_read1(fp, hdr, b) < 0) break;
+        reads++;
+        if (reads%1000000 ==0) LOG_print("%u reads indexed.", reads);
         bam1_core_t *c = &b->core;
         if (c->flag & BAM_FQCFAIL ||
             c->flag & BAM_FSECONDARY ||
@@ -153,7 +154,6 @@ void build_index()
         }
         assert(u);
         PISA_dna_push(u, umi+1);
-        if (reads%1000000 ==0) LOG_print("%u reads indexed.", reads);
     }
     bam_destroy1(b);
     bam_hdr_destroy(hdr);
