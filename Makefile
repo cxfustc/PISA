@@ -55,7 +55,7 @@ LIB_OBJ = src/barcode_list.o \
 	src/dict.o \
 	src/ksa.o \
 	src/bam_pool.o \
-	src/umi_corr.o \
+	src/multi_index_list.o \
 	src/dict.o \
 	src/read_thread.o \
 	src/read_tags.o \
@@ -63,7 +63,8 @@ LIB_OBJ = src/barcode_list.o \
 	src/thread.o \
 	src/fragment.o \
 	src/compactDNA.o \
-	src/bam_region.o
+	src/bam_region.o \
+	src/dna_pool.o
 
 AOBJ = src/bam_anno.o \
 	src/bam_count.o \
@@ -99,6 +100,7 @@ src/bam_count.o: src/bam_count.c pisa_version.h
 src/bam_pick.o: src/bam_pick.c
 src/bam_anno_vcf.o: src/bam_anno_vcf.c
 src/bam_tag_corr.o: src/bam_tag_corr.c
+src/multi_index_list.o:src/multi_index_list.c
 src/umi_corr.o: src/umi_corr.c
 src/fastq_parse_barcode.o: src/fastq_parse_barcode.c
 src/fastq_sort.o: src/fastq_sort.c
@@ -121,6 +123,7 @@ src/bam_pool.o: src/bam_pool.c
 src/bam_extract_tags.o: src/bam_extract_tags.c
 src/usage.o:src/usage.c
 src/bam_rmdup.o:src/bam_rmdup.c
+src/dna_pool.o:src/dna_pool.c
 
 clean: testclean
 	-rm -f gmon.out *.o *~ $(PROG) pisa_version.h 
