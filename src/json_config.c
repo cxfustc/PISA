@@ -27,8 +27,9 @@
 #include <assert.h>
 #include <errno.h>
 #include <ctype.h>
-#include "htslib/kstring.h"
 #include <zlib.h>
+
+#include <htslib/kstring.h>
 
 #define ANSI_COLOR_RED     "\x1b[31m"
 #define ANSI_COLOR_GREEN   "\x1b[32m"
@@ -356,6 +357,7 @@ static char *read_line(char *fn, int l, void *fp)
 {
     return fgets(fn, l, (FILE*)fp);
 }
+
 char *json_config_open(const char *fname)
 {
     FILE *fp;

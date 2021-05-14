@@ -63,7 +63,16 @@ LIB_OBJ = src/barcode_list.o \
 	src/thread.o \
 	src/fragment.o \
 	src/compactDNA.o \
-	src/bam_region.o
+	src/bam_region.o \
+  src/util.o \
+  src/str.o \
+  src/rseq.o \
+  src/math_basic.o \
+  src/kseq_ext.o \
+  src/hash.o \
+  src/hash_func.o \
+	src/config.o \
+  src/xth.o
 
 AOBJ = src/bam_anno.o \
 	src/bam_count.o \

@@ -1,22 +1,21 @@
-// Simimarity Search of short DNA sequences 10~16bp
-#ifndef SIM_SEARCH_HEADER
-#define SIM_SEARCH_HEADER
+/***********************************************************
+  *File Name: 
+  *Description: 
+  *Author: Chen Xi
+  *Email: chenxi1@genomics.cn
+  *Create Time: 2021-03-12 13:04:59
+  *Edit History: 
+***********************************************************/
 
-typedef uint64_t  base64_t;
-typedef uint32_t  base32_t;
+#include "str.h"
 
-typedef struct similarity_search_aux ss_t;
+struct ss_s;
+typedef struct ss_s ss_t;
 
-extern void set_levenshtein();
-extern void set_hamming();
+ss_t * ss_init (int nth);
 
-extern ss_t *ss_init();
-extern char *ss_query(ss_t *S, char *seq, int e, int *i);
-extern int ss_push(ss_t *S, char *seq);
-extern void ss_destroy(ss_t *);
+int ss_push (ss_t * engine, char * seq, int l);
 
-#endif
-    
+str_t * ss_query (ss_t * engine, char * seq, int l, int dist, int * is_exact_match, int thid);
 
-
-   
+void ss_destroy (ss_t * engine);
